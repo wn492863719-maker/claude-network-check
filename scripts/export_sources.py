@@ -17,7 +17,7 @@ def export_sources():
         path = ROOT / name
         if path.is_symlink() or not path.resolve().is_relative_to(ROOT):
             raise ValueError('Source path outside public repository')
-        parts.append('\n## ' + name + '\n\n' + chr(96)*4 + languages.get(path.suffix, 'text') + '\n' + path.read_text().rstrip('\n') + '\n' + chr(96)*4 + '\n')
+        parts.append('\n## ' + name + '\n\n````' + languages.get(path.suffix, 'text') + '\n' + path.read_text().rstrip('\n') + '\n````\n')
     destination = ROOT / 'docs/完整文件内容.md'
     destination.write_text(''.join(parts))
     return destination
