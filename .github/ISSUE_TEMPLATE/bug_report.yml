@@ -1,0 +1,31 @@
+name: Bug report / 问题反馈
+description: Report a reproducible diagnostic or interface issue.
+body:
+  - type: markdown
+    attributes:
+      value: "请只使用合成或脱敏数据。不要提交真实 IP、SSID、公司 DNS、账号、订阅 URL 或浏览器会话 JSON。安全漏洞请按 SECURITY.md 私下报告。"
+  - type: input
+    id: version
+    attributes:
+      label: App version / 应用版本
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: macOS version and architecture / 系统版本与架构
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce / 复现步骤
+      description: Include request path, address family and timing only where relevant.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected and observed behavior / 预期与实际行为
+    validations:
+      required: true
