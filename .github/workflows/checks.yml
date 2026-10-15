@@ -1,0 +1,36 @@
+name: Offline checks and macOS build
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - name: Python offline tests
+        run: python3 -m unittest -v test_environment.py test_egress.py test_privacy_audit.py
+      - name: Browser and bridge offline tests
+        run: |
+          node test_frontend.js
+          node test_browser_probe.js
+      - name: Validate public package
+        run: |
+          chmod +x build_app.command 启动工具.command
+          python3 scripts/check_release.py
+      - name: Compile and verify app
+        run: |
+          ./build_app.command
+          codesign --verify --deep --strict "dist/Claude Network Check.app"
+          "dist/Claude Network Check.app/Contents/MacOS/NetworkEnvironmentCheck" --version
