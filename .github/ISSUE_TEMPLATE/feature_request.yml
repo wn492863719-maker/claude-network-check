@@ -1,0 +1,20 @@
+name: Feature request / 功能建议
+description: Suggest a focused improvement.
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / 使用场景
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior / 希望的行为
+    validations:
+      required: true
+  - type: textarea
+    id: privacy
+    attributes:
+      label: Data and permission implications / 数据与权限影响
+      description: Identify any additional collection, external service or system change.
