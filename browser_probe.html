@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src https://api.ipify.org https://api64.ipify.org https://www.cloudflare.com; base-uri 'none'; form-action 'none'">
+<title>浏览器地区暴露自测</title>
+<style>body{font:15px/1.7 -apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;background:#f4f5f7;color:#25303d;margin:0}main{max-width:760px;margin:auto;padding:32px}section{background:white;border:1px solid #e7eaee;border-radius:12px;padding:22px;margin:18px 0}h1{font-size:26px;margin:0}h2{font-size:17px}button{font:inherit;border:1px solid #ccd4e1;border-radius:8px;padding:8px 15px;background:white;cursor:pointer}button:disabled{opacity:.5}.primary{background:#3564d8;color:white}textarea{width:100%;height:260px;box-sizing:border-box;font:12px/1.5 monospace;padding:12px;border:1px solid #ccd4e1;border-radius:8px}p{font-size:13px;color:#67717f}.status{color:#3564d8}button:focus-visible,textarea:focus-visible{outline:3px solid #9cb8ff}</style></head>
+<body><main><h1>浏览器地区暴露自测</h1>
+<p>保持当前网络、代理节点和模式不变。运行后将结果复制回「网络环境检查」。</p>
+<section><p>测试连接 ipify、Cloudflare 和 Google STUN。只查询定位权限状态，不读取精确位置，也不申请摄像头或麦克风。本地文件的权限结果不代表所有网站的权限。</p>
+<button id="run" class="primary">运行浏览器测试</button> <button id="copy" disabled>复制结果</button>
+<p id="status" class="status" role="status" aria-live="polite">等待开始。</p></section>
+<section><h2>本轮结果</h2><textarea id="output" readonly aria-label="可复制的浏览器测试结果"></textarea><p>复制不可用时，选中结果全文复制。结果包含公网 IP 和浏览器线索，仅粘贴回本机工具。</p></section></main>
+<script>
+'use strict';
+const $=id=>document.getElementById(id);
+const session=new URLSearchParams(location.hash.slice(1)).get('session')||'';
+const endpoints=[['ipify IPv4','https://api.ipify.org?format=json'],['ipify 双栈','https://api64.ipify.org?format=json'],['Cloudflare','https://www.cloudflare.com/cdn-cgi/trace']];
+function normalizeAddress(address){return typeof address==='string'&&/^\[[0-9a-f:]+\]$/i.test(address)?address.slice(1,-1):address}
+function addressScope(address){
+ if(!address||address.endsWith('.local'))return 'mdns';
+ if(/^\d+\.\d+\.\d+\.\d+$/.test(address)){const n=address.split('.').map(Number);if(n.some(x=>x>255))return 'unknown';return n[0]===0||n[0]===10||n[0]===127||n[0]>=224||(n[0]===169&&n[1]===254)||(n[0]===192&&n[1]===168)||(n[0]===172&&n[1]>=16&&n[1]<=31)||(n[0]===100&&n[1]>=64&&n[1]<=127)||(n[0]===198&&(n[1]===18||n[1]===19))||(n[0]===192&&n[1]===0)||(n[0]===198&&n[1]===51&&n[2]===100)||(n[0]===203&&n[1]===0&&n[2]===113)?'private':'public'}
+ if(address.includes(':'))return /^(fe[89ab]|fc|fd)/i.test(address)||address==='::1'||address==='::'?'private':'public';return 'unknown';
+}
+async function fetchExit(source,url,round){
+ const start=performance.now(),controller=new AbortController(),timer=setTimeout(()=>controller.abort(),8000);
+ try{const response=await fetch(url,{cache:'no-store',credentials:'omit',referrerPolicy:'no-referrer',signal:controller.signal});if(!response.ok)throw new Error('HTTP '+response.status);const raw=await response.text();if(raw.length>8192)throw new Error('响应过大');let ip,country=null;
+ if(source==='Cloudflare'){const fields=Object.fromEntries(raw.split('\n').filter(s=>s.includes('=')).map(s=>[s.slice(0,s.indexOf('=')),s.slice(s.indexOf('=')+1)]));ip=fields.ip;country=fields.loc||null}else ip=JSON.parse(raw).ip;
+ if(typeof ip!=='string'||ip.length>45||addressScope(ip)!=='public')throw new Error('无有效公网地址');
+ return {source,round,ok:true,ip,country,seconds:Math.round((performance.now()-start))/1000,error:null};
+ }catch(e){return {source,round,ok:false,ip:null,country:null,seconds:Math.round((performance.now()-start))/1000,error:e.name==='AbortError'?'查询超时':'查询失败或跨域受限'}}finally{clearTimeout(timer)}
+}
+async function rtcProbe(){
+ if(typeof RTCPeerConnection==='undefined')return {status:'unsupported',candidates:[]};
+ return new Promise(resolve=>{let pc,finished=false;const candidates=[];let timer;
+ const finish=status=>{if(finished)return;finished=true;clearTimeout(timer);if(pc)pc.close();resolve({status,candidates})};
+ try{pc=new RTCPeerConnection({iceServers:[{urls:'stun:stun.l.google.com:19302'}]});timer=setTimeout(()=>finish('timeout'),8000);
+ pc.onicecandidate=event=>{if(!event.candidate)return finish('complete');if(candidates.length>=24)return;const words=event.candidate.candidate.split(' '),address=normalizeAddress(event.candidate.address||words[4]),type=event.candidate.type||words[7],scope=addressScope(address);const item={scope,type:['host','srflx','relay','prflx'].includes(type)?type:'unknown',protocol:(event.candidate.protocol||words[2]||'').toLowerCase(),ip:scope==='public'?address:null};if(!candidates.some(x=>JSON.stringify(x)===JSON.stringify(item)))candidates.push(item)};
+ pc.createDataChannel('diagnostic');pc.createOffer().then(offer=>pc.setLocalDescription(offer)).catch(()=>finish('error'));
+ }catch(e){finish('error')}});
+}
+async function permissionState(){try{return (await navigator.permissions.query({name:'geolocation'})).state}catch{return 'unsupported'}}
+async function run(){
+ if(!/^[a-f0-9]{32}$/.test(session)){$('status').textContent='请从桌面工具开启测试会话后打开此页面。';return}
+ $('run').disabled=true;$('copy').disabled=true;$('output').value='';$('status').textContent='正在检测浏览器出口、WebRTC 和可见设置…';
+ try{const rtc=rtcProbe(),permission=permissionState(),exits=[];
+ for(let round=1;round<=3;round++)exits.push(...await Promise.all(endpoints.map(([name,url])=>fetchExit(name,url,round))));
+ const data={version:1,session,checked_at:new Date().toISOString(),origin_kind:'local-file',secure_context:!!globalThis.isSecureContext,
+ timezone:Intl.DateTimeFormat().resolvedOptions().timeZone||null,languages:Array.from(navigator.languages||[]).slice(0,16),
+ geolocation_permission:await permission,webrtc:await rtc,exits};
+ $('output').value=JSON.stringify(data,null,2);$('copy').disabled=false;$('status').textContent='测试完成。复制结果并立即粘贴回桌面工具；失败项会保留为未验证。';
+ }catch(e){$('status').textContent='测试未完成，请重试。'}finally{$('run').disabled=false}
+}
+$('run').addEventListener('click',run);$('copy').addEventListener('click',async()=>{try{await navigator.clipboard.writeText($('output').value);$('status').textContent='结果已复制，请粘贴回桌面工具。'}catch{$('output').focus();$('output').select();$('status').textContent='请选择结果全文并复制。'}});
+</script></body></html>

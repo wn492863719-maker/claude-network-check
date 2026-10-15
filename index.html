@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; base-uri 'none'; form-action 'none'">
+<title>Claude Network Check · 网络环境检查</title>
+<style>
+:root{--bg:#f4f5f7;--paper:#fff;--ink:#25303d;--muted:#78818d;--line:#e7eaee;--blue:#3564d8;--orange:#986014;--green:#268065}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.6 -apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif}main{max-width:860px;margin:auto;padding:30px}button,select{font:inherit}button{cursor:pointer;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);padding:8px 13px;white-space:nowrap}button:disabled{opacity:.45;cursor:default}button:focus-visible,select:focus-visible,a:focus-visible{outline:3px solid #9cb8ff;outline-offset:3px}.primary{background:var(--blue);border-color:var(--blue);color:#fff}.header,.row,.buttons{display:flex;align-items:center;justify-content:space-between;gap:12px}.header{margin-bottom:24px}h1{margin:0;font-size:26px;letter-spacing:-.5px}.sub{font-size:12px;color:var(--muted);margin-top:5px}.buttons{justify-content:flex-end}.status{font-size:12px;color:var(--muted);margin-bottom:15px;min-height:20px}.card{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:19px 20px;margin-bottom:12px}.label{font-size:12px;color:var(--muted)}.value{font-size:22px;font-weight:650;letter-spacing:-.3px;margin-top:4px;word-break:break-word}.smallvalue{font-size:18px}.hint{color:var(--muted);font-size:12px;margin-top:7px;word-break:break-word}.tag{border-radius:5px;padding:2px 7px;font-size:11px;background:#edf2fc;color:var(--blue);display:inline-block}.tag.warn{background:#fff3de;color:var(--orange)}.tag.good{background:#e9f6ef;color:var(--green)}.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}.two .card{margin-bottom:0}.cardfoot{display:flex;align-items:center;justify-content:space-between;margin-top:13px;gap:10px}.reference{display:flex;align-items:center;gap:10px;margin:14px 0 17px;color:var(--muted);font-size:12px}.reference select{flex:1;width:100%;max-width:100%;min-width:0;padding:7px 9px;border-radius:7px;border:1px solid var(--line);background:#fff;color:var(--ink)}details{background:var(--paper);border:1px solid var(--line);border-radius:12px;margin-top:12px;padding:15px 20px}summary{cursor:pointer;font-size:13px;font-weight:550}.proxyrow{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 0;border-bottom:1px solid var(--line);font-size:12px}.proxyrow:last-child{border:0}.service{margin-top:15px;font-size:12px;color:var(--muted)}.note{font-size:12px;color:var(--muted);margin:14px 0 0}.links{display:flex;gap:12px;flex-wrap:wrap;margin-top:12px}a{color:var(--muted);font-size:12px;text-underline-offset:3px}footer{font-size:11px;color:var(--muted);margin-top:19px}footer p{margin:7px 0}.hidden{display:none!important}dialog{width:460px;max-width:calc(100% - 30px);border:1px solid var(--line);border-radius:14px;padding:24px;color:var(--ink)}dialog::backdrop{background:#1b2c4950}dialog h2{margin:0 0 12px;font-size:20px}dialog ul{padding-left:20px;font-size:13px}dialog .buttons{margin-top:22px}.result{font-size:12px;color:var(--green);margin:12px 0}.error{color:#b7513d}.fallback{font-size:12px;padding:10px;background:#fff4de;color:var(--orange);border-radius:7px;margin-bottom:15px}@media(max-width:600px){main{padding:22px 18px}.header{align-items:flex-start;flex-direction:column}.buttons{justify-content:flex-start}h1{font-size:24px}.two{grid-template-columns:1fr}.value{font-size:20px}.reference{align-items:flex-start;flex-direction:column}.card{padding:17px}.cardfoot{align-items:flex-start}.proxyrow{flex-wrap:wrap}}
+</style>
+<style>
+.egress-path{border-top:1px solid var(--line);padding:13px 0}.egress-path .row{align-items:flex-start}.egress-path strong{font-size:13px}.egress-ips{font-size:13px;word-break:break-all;margin:6px 0}.reference-input{display:flex;gap:8px;margin-top:10px}.reference-input input{flex:1;min-width:0;border:1px solid var(--line);border-radius:7px;padding:8px;font:inherit}.reference-input input:focus-visible{outline:3px solid #9cb8ff}.egress-notes{padding-left:18px;margin:10px 0;font-size:12px;color:var(--muted)}.egress-path details{padding:8px 12px;margin-top:7px}.egress-path summary{font-size:12px}@media(max-width:600px){.reference-input{flex-wrap:wrap}}
+</style>
+</head>
+<body>
+<main>
+<header class="header"><div><h1>Claude Network Check</h1><div class="sub">网络环境检查 · macOS 本地桌面应用</div></div><div class="buttons"><button id="scan">开始检查</button><button id="align" class="primary" disabled>按出口对齐</button></div></header>
+<div id="fallback" class="fallback hidden">请打开桌面的「网络环境检查.app」。独立 HTML 仅为界面预览，检测与修复由桌面应用完成。</div>
+<div id="status" class="status" role="status" aria-live="polite">点击检查。检测只读取设置，修复前会显示具体变更。</div>
+<section class="card"><div class="row"><span class="label">检测请求的网络出口</span><span id="exitTag" class="tag">未检查</span></div><div id="exitCountry" class="value">—</div><div id="exitIP" class="hint">IP、地区、运营商</div><div id="sourceInfo" class="hint"></div></section>
+<section class="card" aria-labelledby="stabilityTitle">
+<div class="row"><span id="stabilityTitle" class="label">出口稳定性</span><button id="stability">检查稳定性</button></div>
+<div id="stabilityHeadline" class="value smallvalue">换网后检查当前出口</div>
+<p id="stabilityNote" class="hint" role="status" aria-live="polite">多轮比较系统代理、其他本地代理及 IPv4 / IPv6。换网络后 IP 改变，不一定代表掉线。</p>
+<div id="stabilityPaths"></div><ul id="stabilityNotes" class="egress-notes"></ul>
+<label class="label" for="referenceIP">固定 IPv4 参考（可选）</label>
+<div class="reference-input"><input id="referenceIP" type="text" inputmode="decimal" autocomplete="off" maxlength="45" placeholder="填写服务商提供的固定 IP"><button id="saveReference">保存参考</button></div>
+<div id="referenceState" class="hint" role="status" aria-live="polite">参考只用于精确比较，不会锁定 IP 或切换节点。留空保存可清除参考。</div>
+</section>
+<section class="card" aria-labelledby="auditTitle">
+<div class="row"><span id="auditTitle" class="label">热点／公司网络与地区暴露</span><button id="auditExport">导出脱敏报告</button></div>
+<div id="auditHeadline" class="value smallvalue">等待两种网络的实测</div>
+<p class="hint">手动连接所选网络，保持相同美国节点与代理模式。先采集本机，再运行 Chrome 自测并粘贴结果。</p>
+<div class="reference-input"><label for="auditNetwork">当前网络</label><select id="auditNetwork"><option value="company">公司网络</option><option value="hotspot">手机热点</option></select><input id="nodeNote" maxlength="100" aria-label="节点与代理模式备注" placeholder="实际节点名与模式，两轮保持相同"></div>
+<div class="links"><button id="auditStart">1 · 采集本机（三轮）</button><button id="auditBrowser" disabled>2 · 打开 Chrome 自测</button><button id="auditRetest">换网后复测</button></div>
+<p id="auditStatus" class="hint" role="status" aria-live="polite">公司网络：未验证；手机热点：未验证。</p>
+<label for="browserResult" class="label">3 · 粘贴 Chrome 自测结果</label><textarea id="browserResult" maxlength="12000" rows="4" style="width:100%;font:12px/1.5 monospace;border:1px solid #ccd4e1;border-radius:8px;padding:9px" placeholder="粘贴自测页复制的 JSON。不会读取系统剪贴板。"></textarea>
+<div class="links"><button id="auditImport" disabled>核对并导入本轮结果</button><button id="locationSettings">Chrome 定位权限</button><button id="policySettings">Chrome 策略检查</button></div>
+<div id="auditFindings"></div><ul id="auditNotes" class="egress-notes"></ul><div id="auditExportPath" class="hint"></div>
+</section>
+<div class="reference"><label for="target">对齐参考</label><select id="target" disabled><option>检查后显示出口时区</option></select></div>
+<div class="two">
+<section class="card"><div class="label">系统时区</div><div id="systemTimezone" class="value smallvalue">—</div><div id="targetTimezone" class="hint">出口参考：—</div><div class="cardfoot"><span id="timezoneTag" class="tag">未检查</span><button id="fixTimezone" disabled>仅对齐时区</button></div></section>
+<section class="card"><div class="label">地区与日期格式</div><div id="systemLocale" class="value smallvalue">—</div><div id="targetLocale" class="hint">出口参考：—</div><div class="cardfoot"><span id="localeTag" class="tag">未检查</span><button id="fixLocale" disabled>仅对齐地区</button></div></section>
+</div>
+<div id="result" class="result" aria-live="polite"></div>
+<details id="proxyDetails"><summary id="proxySummary">系统代理</summary><div id="proxies" class="note">检查后显示，按网络服务与类型单独处理。</div><p class="note">代理开启不一定是问题。只关闭你明确选择的类型；不会关闭 VPN/TUN，关闭后可能中断连接。</p></details>
+<details><summary>其他网络信息</summary><div id="networkInfo" class="note">检查后显示 DNS、路由接口等信息。</div><div class="links"><button id="timeSettings">日期与时间</button><button id="networkSettings">网络设置</button></div></details>
+<details><summary>修复与恢复记录</summary><div id="records" class="note">尚无修复记录。</div></details>
+<footer><p>地区与时区以 IP 数据库为参考，支持新西兰、美国及其他出口；系统语言保留。数据库有分歧时请自行核对参考值。</p><p>检测站点的出口可能与 Claude 不同；改变本机设置不能更改物理所在地、账号资料或服务端记录。<a href="https://www.anthropic.com/legal/privacy">官方隐私政策</a></p><p>公网查询连接 ipify、Cloudflare、ipwho.is、ipapi.co，服务可看到查询 IP。出口历史仅保存在本机。此应用不占用本地监听端口。</p></footer>
+</main>
+<dialog id="dialog"><h2 id="dialogTitle">确认变更</h2><div id="plan"></div><div class="buttons"><button id="cancel">取消</button><button id="apply" class="primary">执行</button></div></dialog>
+<script>
+'use strict';
+const $=id=>document.getElementById(id),native=!!window.webkit?.messageHandlers?.environment;
+const escapeHTML=v=>String(v??'—').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let data=null,busy=false,plan=null,counter=0,referenceChosen=false,egressData=null,auditSession=null;
+const pending=new Map();
+window.nativeResult=response=>{const request=pending.get(response.id);if(!request)return;clearTimeout(request.timer);pending.delete(response.id);response.ok?request.resolve(response.result):request.reject(new Error(response.error||'请求未完成'))};
+function call(method,payload={}){return new Promise((resolve,reject)=>{if(!native)return reject(new Error('请打开桌面应用'));const id='r'+(++counter),timer=setTimeout(()=>{pending.delete(id);reject(new Error('请求超时，请重新打开应用后检查'))},method==='apply'||method==='restore'?300000:method==='privacy_start'?180000:method==='egress'?120000:80000);pending.set(id,{resolve,reject,timer});window.webkit.messageHandlers.environment.postMessage({id,method,payload})})}
+function target(){return data?.targets?.[Number($('target').value)]}
+function status(message,error=false){$('status').textContent=message;$('status').className='status'+(error?' error':'')}
+function ready(){const t=target(),state=data?.local?.system,canAlign=!!t&&referenceChosen;$('scan').disabled=busy||!native;for(const id of ['stability','saveReference','referenceIP','auditStart','auditRetest','auditNetwork','nodeNote','auditExport','browserResult','locationSettings','policySettings'])$(id).disabled=busy||!native;for(const id of ['auditBrowser','auditImport'])$(id).disabled=busy||!native||!auditSession;$('target').disabled=busy||!data?.targets?.length;$('fixTimezone').disabled=busy||!canAlign||!state?.timezone||state.timezone===t.timezone;$('fixLocale').disabled=busy||!canAlign||state?.locale===t.locale;$('align').disabled=busy||!canAlign||($('fixTimezone').disabled&&$('fixLocale').disabled);document.querySelectorAll('[data-proxy],[data-restore]').forEach(b=>{b.disabled=busy||!native})}
+function tag(id,text,kind){$(id).textContent=text;$(id).className='tag '+kind}
+function render(){
+ if(!data)return;const observations=data.network?.observations||[],geos=observations.flatMap(n=>(n.geo?.sources||[]).filter(g=>g.ok)),countries=[...new Set(geos.map(g=>g.country_code))],ips=[...new Set(observations.filter(n=>n.ok).map(n=>n.ip))];
+ $('exitCountry').textContent=[...new Set(geos.map(g=>g.country||g.country_code))].join(' / ')||'出口归属未获取';$('exitIP').textContent=ips.length?ips.join(' / '):'公网 IP 未获取';
+ $('sourceInfo').textContent=observations.map(n=>n.source+'：'+(n.ok?(n.geo?.sources||[]).map(g=>g.source+' '+(g.ok?(g.country_code+' · '+(g.isp||'ISP 未获取')):'查询未完成')).join('；'):'连接未完成')).join(' · ');
+ tag('exitTag',countries.length>1?'来源有分歧':countries.length?'已观测出口':'未判定',countries.length>1?'warn':'');
+ const s=data.local.system,t=target();$('systemTimezone').textContent=s.timezone||'未获取';$('systemLocale').textContent=s.locale||'默认';$('targetTimezone').textContent='出口参考：'+(t?.timezone||'未获取');$('targetLocale').textContent='出口参考：'+(t?.locale||'未获取')+' · 保留语言';
+ tag('timezoneTag',!t?'未判定':s.timezone===t.timezone?'一致':'有差异',!t?'':s.timezone===t.timezone?'good':'warn');tag('localeTag',!t?'未判定':s.locale===t.locale?'一致':'可选调整',!t?'':s.locale===t.locale?'good':'');
+ const states=s.proxy_states||{};let count=0;const html=Object.entries(states).map(([service,values])=>{const active=Object.entries(values).filter(([kind,v])=>v===true||v===null||['http','https','socks'].includes(kind));count+=active.filter(([,v])=>v===true).length;return active.length?`<div class="service">${escapeHTML(service)}</div>`+active.map(([kind,value])=>`<div class="proxyrow"><span>${escapeHTML(kind.toUpperCase())} · ${value===true?'开启':value===false?'关闭':'未读取'}</span>${value!==null?`<button data-proxy="${escapeHTML(kind)}" data-enabled="${value===false}" data-service="${escapeHTML(service)}">${value===true?'仅关闭此项':'预览启用已配置本地代理'}</button>`:''}</div>`).join(''):''}).join('');$('proxySummary').textContent='系统代理 · '+count+' 项已开启';$('proxies').innerHTML=html||'未观测到开启的系统代理。';
+ const l=data.local;$('networkInfo').textContent='DNS：'+(l.dns_servers.join(' / ')||'未获取')+'；默认接口：'+(l.default_interface||'未获取')+'；隧道接口：'+(l.tunnel_interfaces.join(' / ')||'未观测到')+'。隧道接口不证明 VPN 正在使用。';ready();
+}
+async function scan(){if(busy)return;busy=true;ready();status('正在检查出口与本机设置…');try{data=await call('scan',{network:true});referenceChosen=data.targets.length===1;const select=$('target');select.innerHTML=data.targets.length?data.targets.map((t,i)=>`<option value="${i}">${escapeHTML(t.country_name)} · ${escapeHTML(t.timezone)} · ${escapeHTML(t.sources.join(' / '))}</option>`).join(''):'<option>出口时区未获取，请重试</option>';if(data.targets.length>1){select.insertAdjacentHTML('afterbegin','<option value="-1" selected>检测结果有分歧，请选择参考值</option>')}render();$('scan').textContent='重新检查';await records();status('检查完成 · '+new Date().toLocaleTimeString()+(data.targets.length>1?' · 请核对并选择参考值':''))}catch(e){status(e.message,true)}finally{busy=false;ready()}}
+async function preview(options){if(busy)return;busy=true;ready();status('准备变更预览…');try{plan=await call('preview',{options});$('dialogTitle').textContent=plan.actions.length?'确认指定变更':'设置已符合所选参考';$('plan').innerHTML='<ul>'+plan.actions.map(a=>'<li>'+escapeHTML(a.label)+'</li>').join('')+'</ul><p class="note">保存原值后执行，并回读确认。'+(plan.admin_required?'macOS 将请求管理员授权。':'')+(options.proxy?(options.proxy.enabled?'仅启用已配置的本地代理，可能改变连接路径。':'仅关闭这个代理类型，可能中断连接。'):'保留语言偏好。地区格式可能需要重新打开应用后生效。')+'</p>';$('apply').disabled=!plan.actions.length;$('dialog').showModal();status('请核对具体变更；取消不会修改设置。')}catch(e){status(e.message,true)}finally{busy=false;ready()}}
+async function records(){try{const result=await call('records');$('records').innerHTML=result.items.length?result.items.map(r=>`<div class="proxyrow"><span>${escapeHTML(new Date(r.created_at).toLocaleString())}<br>${escapeHTML(r.labels.join('；'))}</span><button data-restore="${escapeHTML(r.id)}">恢复原值</button></div>`).join(''):'尚无修复记录。'}catch{}}
+function renderReference(){
+ if(!egressData)return;const texts={unset:'尚未设置固定 IP 参考。',unknown:'未取得当前出口，无法比较参考。',match:'本次观测与固定 IP 参考一致。',partial:'仅部分观测匹配参考，存在其他出口。',mismatch:'当前观测与固定 IP 参考不同。'};
+ $('referenceState').textContent=(texts[egressData.reference_status]||'')+' 保存参考不会锁定 IP 或切换节点。';
+}
+function renderEgress(){
+ const r=egressData;if(!r)return;$('stabilityHeadline').textContent=r.headline;
+ $('stabilityNote').textContent=`${new Date(r.checked_at).toLocaleString()} · ${r.rounds} 轮 · ${r.duration_seconds} 秒${r.changed_during?' · 请重测':''}`;
+ $('stabilityPaths').innerHTML=r.paths.map(p=>`<div class="egress-path"><div class="row"><strong>${escapeHTML(p.label)}${p.primary?' · 当前比较路径':''}</strong><span class="tag ${p.multi_exit||p.failures?'warn':'good'}">${p.success}/${p.attempts} 成功</span></div><div class="egress-ips">${p.ips.length?p.ips.map(escapeHTML).join(' / '):'未取得公网 IP'}</div><div class="hint">IPv${p.family}${p.multi_exit?' · 同一路径多个出口':''}${p.countries?.length?' · '+escapeHTML(p.countries.join(' / ')):''}${p.median_seconds!=null?' · 成功请求中位耗时 '+p.median_seconds+' 秒':''}${p.errors.length?' · '+escapeHTML(p.errors.join(' / ')):''}</div><details><summary>逐轮检测结果</summary><div class="hint">${p.samples.map(s=>`${s.round} 轮 · ${escapeHTML(s.source)} · ${s.ok?escapeHTML(s.ip):escapeHTML(s.error)}${s.seconds!=null?' · '+s.seconds+' 秒':''}`).join('<br>')}</div></details></div>`).join('');
+ $('stabilityNotes').innerHTML=[...r.notes,...(r.history_error?[r.history_error]:[])].map(n=>'<li>'+escapeHTML(n)+'</li>').join('');
+ $('referenceIP').value=r.reference_ip||'';renderReference();
+}
+async function checkStability(){
+ if(busy)return;busy=true;ready();const start=Date.now();status('正在进行三轮出口检查…');$('stabilityNote').textContent='正在逐轮比较请求路径，请等待；检测只读取网络。';
+ const ticker=setInterval(()=>{$('stabilityNote').textContent='正在检测 · 已用 '+Math.floor((Date.now()-start)/1000)+' 秒 · 共三轮，完成后显示各路径结果'},1000);
+ try{egressData=await call('egress');renderEgress();$('stability').textContent='重新检查稳定性';status('出口检查完成 · '+egressData.headline)}catch(e){$('stabilityNote').textContent=e.message;status(e.message,true)}finally{clearInterval(ticker);busy=false;ready()}
+}
+async function saveReference(){
+ if(busy)return;busy=true;ready();try{const r=await call('egress_reference',{ip:$('referenceIP').value.trim()});$('referenceIP').value=r.reference_ip||'';
+ if(egressData){const ips=egressData.paths.find(p=>p.primary)?.ips||[];egressData.reference_ip=r.reference_ip;egressData.reference_status=!r.reference_ip?'unset':!ips.length?'unknown':ips.length===1&&ips[0]===r.reference_ip?'match':ips.includes(r.reference_ip)?'partial':'mismatch';renderReference()}
+ else $('referenceState').textContent=r.reference_ip?'已保存参考，请检查稳定性后比较。':'已清除参考。';status('参考已保存到本机；网络设置未修改。')
+ }catch(e){status(e.message,true)}finally{busy=false;ready()}
+}
+function renderComparison(c){if(!c)return;$('auditHeadline').textContent=c.headline;$('auditStatus').textContent='公司网络：'+c.statuses.company+'；手机热点：'+c.statuses.hotspot;$('auditNotes').innerHTML=(c.notes||[]).map(n=>'<li>'+escapeHTML(n)+'</li>').join('')}
+function renderAudit(record){if(!record)return;const f=record.findings||{};$('auditFindings').innerHTML=[['site_visible','网站可见'],['native_only','本机应用可读'],['unverified','尚未验证'],['repair_steps','处理建议']].map(([key,title])=>'<details><summary>'+title+'</summary><ul class="egress-notes">'+(f[key]||[]).map(s=>'<li>'+escapeHTML(s)+'</li>').join('')+'</ul></details>').join('');egressData=record.native;renderEgress()}
+async function auditStart(retest=false){if(busy)return;busy=true;auditSession=null;ready();$('browserResult').value='';status('正在采集所选网络，保持节点与模式不变…');const start=Date.now(),ticker=setInterval(()=>{$('auditStatus').textContent='本机三轮检测中 · 已用 '+Math.floor((Date.now()-start)/1000)+' 秒'},1000);try{const r=await call('privacy_start',{label:$('auditNetwork').value,node_note:$('nodeNote').value.trim(),retest});auditSession=r.session;renderAudit(r.record);renderComparison(r.comparison);status('本机已采集，请打开 Chrome 自测')}catch(e){status(e.message,true);$('auditStatus').textContent=e.message}finally{clearInterval(ticker);busy=false;ready()}}
+async function auditImport(){if(busy||!auditSession)return;busy=true;ready();try{const r=await call('privacy_import',{text:$('browserResult').value});auditSession=null;renderAudit(r.record);renderComparison(r.comparison);status('本轮浏览器结果已校验并导入')}catch(e){status(e.message,true)}finally{busy=false;ready()}}
+$('auditStart').addEventListener('click',()=>auditStart(false));$('auditRetest').addEventListener('click',()=>auditStart(true));$('auditImport').addEventListener('click',auditImport);
+$('auditNetwork').addEventListener('change',()=>{auditSession=null;ready()});
+$('auditBrowser').addEventListener('click',async()=>{if(!auditSession||busy)return;try{await call('privacy_browser',{session:auditSession})}catch(e){status(e.message,true)}});
+$('auditExport').addEventListener('click',async()=>{if(busy)return;busy=true;ready();try{const r=await call('privacy_export');renderComparison(r.comparison);$('auditExportPath').textContent='脱敏报告：'+r.path;status('报告已导出，IP 与公司网络细节已隐藏')}catch(e){status(e.message,true)}finally{busy=false;ready()}});
+for(const [id,pane] of [['locationSettings','browser_location'],['policySettings','browser_policy']])$(id).addEventListener('click',async()=>{try{await call('settings',{pane})}catch(e){status(e.message,true)}});
+$('stability').addEventListener('click',checkStability);$('saveReference').addEventListener('click',saveReference);
+$('scan').addEventListener('click',scan);
+$('target').addEventListener('change',()=>{referenceChosen=Number($('target').value)>=0;render()});
+$('align').addEventListener('click',()=>preview({fields:['timezone','locale'],target_index:Number($('target').value)}));
+$('fixTimezone').addEventListener('click',()=>preview({fields:['timezone'],target_index:Number($('target').value)}));
+$('fixLocale').addEventListener('click',()=>preview({fields:['locale'],target_index:Number($('target').value)}));
+$('proxies').addEventListener('click',event=>{const b=event.target.closest('[data-proxy]');if(b&&!busy)preview({proxy:{service:b.dataset.service,kind:b.dataset.proxy,enabled:b.dataset.enabled==='true'}})});
+$('records').addEventListener('click',event=>{const b=event.target.closest('[data-restore]');if(!b||busy)return;plan={restore_id:b.dataset.restore};$('dialogTitle').textContent='恢复此记录的原值';$('plan').textContent=b.closest('.proxyrow').querySelector('span').textContent+'。其他程序已修改的设置会停止恢复。';$('apply').disabled=false;$('dialog').showModal()});
+$('cancel').addEventListener('click',()=>{plan=null;$('dialog').close()});$('dialog').addEventListener('cancel',()=>{plan=null});
+$('apply').addEventListener('click',async()=>{if(!plan||busy)return;const p=plan;plan=null;$('dialog').close();busy=true;ready();status('正在处理，请完成或取消 macOS 授权…');try{const result=p.restore_id?await call('restore',{id:p.restore_id}):await call('apply',{plan_id:p.plan_id});$('result').textContent=result.results.map(r=>(r.ok?'✓ ':'! ')+r.action.label+' · '+r.message).join('；');$('result').className='result'+(result.results.some(r=>!r.ok)?' error':'')}catch(e){$('result').textContent=e.message;$('result').className='result error'}finally{busy=false;await scan()}});
+for(const [id,pane] of [['timeSettings','time'],['networkSettings','network']]){$(id).disabled=!native;$(id).addEventListener('click',async()=>{try{await call('settings',{pane})}catch(e){status(e.message,true)}})}
+if(!native)$('fallback').classList.remove('hidden');ready();
+if(native)call('privacy_summary').then(r=>{renderComparison(r.comparison);if(r.records?.length)renderAudit(r.records.at(-1))}).catch(e=>{$('auditStatus').textContent=e.message});
+</script>
+</body>
+</html>
